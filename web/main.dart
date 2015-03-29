@@ -13,10 +13,40 @@ class GridPoint {
     }
 }
 
+
+class Elem {
+    int level;
+
+    Elem(this.level);
+
+    bool isEmpty() {
+        return level == 0;
+    }
+
+    String toString() {
+        return level.toString();
+    }
+}
+
 class Grid {
     final int x, y;
+    List<Elem> elems;
 
-    Grid(this.x, this.y);
+    Grid(this.x, this.y) {
+        elems = new List<Elem>.generate(x*y, (int _) => new Elem(0));
+    }
+
+    Elem getElem(int xi, int yi) {
+        return elems[yi*x + xi];
+    }
+
+    void setElem(int xi, int yi, Elem e) {
+       elems[yi*x + xi] = e;
+    }
+
+    void incElem(int xi, int yi, int lvl) {
+       elems[yi*x + xi].level += 1;
+    }
 }
 
 void prSquare(sq) {
@@ -28,9 +58,10 @@ void prSquare(sq) {
 }
 
 class DrawnGrid {
-    static const boxColor     = '#E8F1FA';
-    static const boxLineColor = '#BED1E6';
+    static const boxColor      = '#E8F1FA';
+    static const boxLineColor  = '#BED1E6';
     static const boxBorderSize = 10;
+    static const hlColor       = 'rgba(32,32,2,.1)';
 
     Grid grid;
     num xsize, ysize;
@@ -47,74 +78,102 @@ class DrawnGrid {
         boxDimY = stepSizeY - boxBorderSize;
     }
 
+    GridPoint getGridCoords(num x, num y) {
+        var gx = x / stepSizeX;
+        var ox = x % stepSizeX;
+        if (gx >= grid.x || ox <= boxBorderSize)
+            return null;
+
+        var gy = y / stepSizeY;
+        var oy = y % stepSizeY;
+        if (gy >= grid.y || oy <= boxBorderSize)
+            return null;
+
+        return new GridPoint(gx.floor(), gy.floor());
+    }
+
     void drawGrid() {
         // background (borders)
         ctx.fillStyle = boxLineColor;
         ctx.fillRect(0, 0, xsize, ysize);
         // boxes
         ctx.fillStyle = boxColor;
-        for (var x = boxBorderSize; x < xsize; x += stepSizeX) {
-            for (var y = boxBorderSize; y < ysize; y += stepSizeY) {
+        for (var x = boxBorderSize; x < xsize; x += stepSizeX)
+            for (var y = boxBorderSize; y < ysize; y += stepSizeY)
                 ctx.fillRect(x, y, boxDimX, boxDimY);
-            }
-        }
     }
 
-    void highlightSq(GridPoint sq) {
-        ctx.fillStyle = 'rgba(32,32,2,.1)';
-        var x = boxBorderSize + (sq.x*stepSizeX);
-        var y = boxBorderSize + (sq.y*stepSizeY);
-        ctx.fillRect(x, y, boxDimX, boxDimY);
-    }
+    void drawGridElem(GridPoint p) {
 
-    void unhighlightSq(GridPoint sq) {
         ctx.fillStyle = boxColor;
-        var x = boxBorderSize + (sq.x*stepSizeX);
-        var y = boxBorderSize + (sq.y*stepSizeY);
+        var x = boxBorderSize + (p.x*stepSizeX);
+        var y = boxBorderSize + (p.y*stepSizeY);
         ctx.fillRect(x, y, boxDimX, boxDimY);
-    }
 
-    getSquareDims(num x, num y) {
-        var gx = x / stepSizeX;
-        var ox = x % stepSizeX;
-        if (gx >= grid.x || ox <= boxBorderSize) {
-            return null;
+        var elem = grid.getElem(p.x, p.y);
+        if (!elem.isEmpty()) {
+            x += boxDimX/2;
+            y += boxDimY/2;
+            ctx.fillStyle = "black";
+            ctx.fillText(elem.toString(), x, y);
+            //print(lvl.toString());
         }
-
-        var gy = y / stepSizeY;
-        var oy = y % stepSizeY;
-        if (gy >= grid.y || oy <= boxBorderSize) {
-            return null;
-        }
-
-        return new GridPoint(gx.floor(), gy.floor());
     }
 
     void HlSquare(num x, num y) {
-        var sq = getSquareDims(x,y);
-        prSquare(sq);
+        var p = getGridCoords(x,y);
+        prSquare(p);
 
-        if (sq == hlSquare) {
+        if (p == hlSquare) {
             return;
         }
 
-        if (sq != null) {
-            highlightSq(sq);
+        if (p != null) {
+            ctx.fillStyle = hlColor;
+            var x = boxBorderSize + (p.x*stepSizeX);
+            var y = boxBorderSize + (p.y*stepSizeY);
+            ctx.fillRect(x, y, boxDimX, boxDimY);
         }
 
         if (hlSquare != null) {
-            unhighlightSq(hlSquare);
+            drawGridElem(hlSquare);
         }
 
-        hlSquare = sq;
+        hlSquare = p;
     }
 
     void UnHlSquare() {
         if (hlSquare != null) {
-            unhighlightSq(hlSquare);
+            drawGridElem(hlSquare);
             hlSquare = null;
         }
     }
+
+    void updateElem(int gx, int gy, int lvl) {
+        grid.setElem(gx, gy, new Elem(lvl));
+        if (lvl != 0) {
+            var x = boxBorderSize + (gx*stepSizeX) + (boxDimX/2);
+            var y = boxBorderSize + (gy*stepSizeY) + (boxDimY/2);
+            ctx.fillStyle = "black";
+            ctx.fillText(lvl.toString(), x, y);
+            print(lvl.toString());
+        }
+    }
+
+    void addItem(num x, num y) {
+        GridPoint sq = getGridCoords(x,y);
+
+        if (sq == null) {
+            return;
+        }
+
+        if (!grid.getElem(sq.x, sq.y).isEmpty()) {
+            return;
+        }
+
+        updateElem(sq.x, sq.y, 1);
+    }
+
 }
 
 void main() {
@@ -123,6 +182,9 @@ void main() {
     CanvasRenderingContext2D ctx = canvas.getContext('2d');
 
     ctx.lineWidth = 4;
+    ctx.font = "40pt Calibri";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     // const bgColor = '#B8D6D3';
     // ctx.fillStyle = bgColor;
     // ctx.fillRect(0, 0, size, size);
@@ -142,6 +204,9 @@ void main() {
         dg.UnHlSquare();
     });
 
-    // TODO: add click support
+    canvas.onMouseDown.listen( (e) {
+        dg.addItem(e.client.x, e.client.y);
+    });
+
     // TODO: match 3 mechanic
 }
