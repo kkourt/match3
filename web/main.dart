@@ -36,12 +36,12 @@ class Grid {
         elems = new List<Elem>.generate(x*y, (int _) => new Elem(0));
     }
 
-    Elem getElem(int xi, int yi) {
-        return elems[yi*x + xi];
+    Elem getElem(GridPoint p) {
+        return elems[p.y*x + p.x];
     }
 
-    void setElem(int xi, int yi, Elem e) {
-       elems[yi*x + xi] = e;
+    void setElem(GridPoint p, Elem e) {
+       elems[p.y*x + p.x] = e;
     }
 
     void incElem(int xi, int yi, int lvl) {
@@ -110,7 +110,7 @@ class DrawnGrid {
         var y = boxBorderSize + (p.y*stepSizeY);
         ctx.fillRect(x, y, boxDimX, boxDimY);
 
-        var elem = grid.getElem(p.x, p.y);
+        var elem = grid.getElem(p);
         if (!elem.isEmpty()) {
             x += boxDimX/2;
             y += boxDimY/2;
@@ -149,11 +149,11 @@ class DrawnGrid {
         }
     }
 
-    void updateElem(int gx, int gy, int lvl) {
-        grid.setElem(gx, gy, new Elem(lvl));
+    void updateElem(GridPoint p, int lvl) {
+        grid.setElem(p, new Elem(lvl));
         if (lvl != 0) {
-            var x = boxBorderSize + (gx*stepSizeX) + (boxDimX/2);
-            var y = boxBorderSize + (gy*stepSizeY) + (boxDimY/2);
+            var x = boxBorderSize + (p.x*stepSizeX) + (boxDimX/2);
+            var y = boxBorderSize + (p.y*stepSizeY) + (boxDimY/2);
             ctx.fillStyle = "black";
             ctx.fillText(lvl.toString(), x, y);
             print(lvl.toString());
@@ -163,17 +163,14 @@ class DrawnGrid {
     void addItem(num x, num y) {
         GridPoint sq = getGridCoords(x,y);
 
-        if (sq == null) {
+        if (sq == null)
             return;
-        }
 
-        if (!grid.getElem(sq.x, sq.y).isEmpty()) {
+        if (!grid.getElem(sq).isEmpty())
             return;
-        }
 
-        updateElem(sq.x, sq.y, 1);
+        updateElem(sq, 1);
     }
-
 }
 
 void main() {
